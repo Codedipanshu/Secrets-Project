@@ -1,7 +1,9 @@
 import 'dotenv/config';
 import express from 'express';
 import mongoose from 'mongoose';
-import md5 from 'md5';
+import bcrypt from 'bcrypt';
+
+const saltRounds = 5;
 const app = express();
 const port = 3000;
 
@@ -30,24 +32,28 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
-    const newUser = new User({
-        email: req.body.username,
-        password: md5(req.body.password)
+    bcrypt.hash(req.body.password, saltRounds, (err, hash) => {
+        const newUser = new User({
+            email: req.body.username,
+            password: hash
+        });
+        newUser.save().then(() => { res.render("secrets.ejs") });
     });
-    newUser.save().then(() => { res.render("secrets.ejs") });
 });
 
 app.post("/login", async (req, res) => {
     const username = req.body.username;
-    const password = md5(req.body.password);
+    const password = req.body.password;
 
     const data = await User.findOne({ email: username });
     if (data) {
-        if (data.password === password) {
-            res.render("secrets.ejs");
-        } else {
-            console.log("Invalid password");
-        }
+        bcrypt.compare(password, data.password, (err, result) => {
+            if (result === true) {
+                res.render("secrets.ejs");
+            } else {
+                console.log("Invalid password");
+            }
+        });
     } else {
         console.log("No user found");
     };
