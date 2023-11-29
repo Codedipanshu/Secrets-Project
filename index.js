@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
 import mongoose from 'mongoose';
-import bcrypt from 'bcrypt';
 import session from 'express-session';
 import passport from 'passport';
 import passportLocalMongoose from 'passport-local-mongoose';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
 const app = express();
 const port = 3000;
@@ -34,6 +34,18 @@ passport.use(User.createStrategy());
 
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
+
+passport.use(new GoogleStrategy({
+    clientID: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/google/secrets"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    User.findOrCreate({ googleId: profile.id }, function (err, user) {
+      return cb(err, user);
+    });
+  }
+));
 
 app.get("/", (req, res) => {
     res.render("home.ejs");
